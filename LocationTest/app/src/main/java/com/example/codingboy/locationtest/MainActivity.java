@@ -39,20 +39,7 @@ public class MainActivity extends AppCompatActivity {
     private LocationManager locationManager;
     private String provider;
     private static final int SHOW_LOCATION=0;
-    private Handler handler=new Handler(){
-      public void handleMessage(Message msg)
-      {
-          switch (msg.what)
-          {
-              case SHOW_LOCATION:
-                  String currentPosition= (String) msg.obj;
-                  positionTextView.setText(currentPosition);
-                  break;
-              default:
-                  break;
-          }
-      }
-    };
+
 
 
     @Override
@@ -70,16 +57,7 @@ public class MainActivity extends AppCompatActivity {
             Toast.makeText(this, "No location provider to use", Toast.LENGTH_SHORT).show();
             return;
         }
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            // TODO: Consider calling
-            //    ActivityCompat#requestPermissions
-            // here to request the missing permissions, and then overriding
-            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-            //                                          int[] grantResults)
-            // to handle the case where the user grants the permission. See the documentation
-            // for ActivityCompat#requestPermissions for more details.
-            return;
-        }
+
         Location location = locationManager.getLastKnownLocation(provider);
         if (location != null) {
             showLocation(location);
@@ -91,16 +69,6 @@ public class MainActivity extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
         if (locationManager != null) {
-            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                // TODO: Consider calling
-                //    ActivityCompat#requestPermissions
-                // here to request the missing permissions, and then overriding
-                //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-                //                                          int[] grantResults)
-                // to handle the case where the user grants the permission. See the documentation
-                // for ActivityCompat#requestPermissions for more details.
-                return;
-            }
             locationManager.removeUpdates(locationListener);
         }
     }
@@ -134,16 +102,13 @@ public class MainActivity extends AppCompatActivity {
             public void run() {
                 InputStream in;
                 String response="";
-                StringBuilder address=new StringBuilder();
-                address.append("http://maps.googleapis.com/maps/api/geocode/json?latlng=");
-                address.append(location.getLatitude()).append(",");
-                address.append(location.getLongitude());
-                address.append("&sensor=false");
+                String address= "http://maps.googleapis.com/maps/api/geocode/json?latlng="+location.getLatitude()+","
+                        +location.getLongitude()+"&sensor=false";
                 try {
-                    URL url=new URL(address.toString());
+                    URL url=new URL(address);
                     HttpURLConnection connection= (HttpURLConnection) url.openConnection();
                     in=connection.getInputStream();
-                    BufferedReader reader=new BufferedReader(new InputStreamReader(in));
+                    BufferedReader reader=new BufferedReader(new InputStreamReader(in,"utf-8"));
                     String line;
                     while ((line=reader.readLine())!=null)
                     {
@@ -151,14 +116,13 @@ public class MainActivity extends AppCompatActivity {
                     }
                     JSONObject jsonObject=new JSONObject(response);
                     JSONArray jsonArray=jsonObject.getJSONArray("results");
-                    if(jsonArray.length()>0)
-                    {
-                        String arm=jsonArray.getJSONObject(0).getString("formatted_address");
+
+                        String arm=jsonArray.getJSONObject(1).getString("formatted_address");
                         Message message=new Message();
                         message.what=SHOW_LOCATION;
                         message.obj=arm;
                         handler.sendMessage(message);
-                    }
+
 
                 } catch (MalformedURLException e) {
                     e.printStackTrace();
@@ -170,4 +134,19 @@ public class MainActivity extends AppCompatActivity {
             }
         }).start();
     }
+    private Handler handler=new Handler(){
+        @Override
+        public void handleMessage(Message msg)
+        {
+            switch (msg.what)
+            {
+                case SHOW_LOCATION:
+                    String currentPosition= (String) msg.obj;
+                    positionTextView.setText(currentPosition);
+                    break;
+                default:
+                    break;
+            }
+        }
+    };
 }
